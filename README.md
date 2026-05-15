@@ -7,6 +7,8 @@ wm density 550 -d 0
 wm density 455 -d 1
 ```
 
+Официальный репозиторий Shizuku: https://github.com/RikkaW/AndroidShizuku
+
 ## Как пользоваться
 
 1. Установи Shizuku на телефон.
