@@ -85,8 +85,11 @@ public class MainActivity extends Activity {
         refreshButtons();
         if (Shizuku.pingBinder()) {
             setStatus("Shizuku найден. Нажми доступ, потом подключить.");
+        } else if (isShizukuInstalled()) {
+            setStatus("Shizuku установлен, но не запущен. Запускаю Shizuku...");
+            launchShizukuApp();
         } else {
-            setStatus("Shizuku не запущен. Запускаю Shizuku...");
+            setStatus("Shizuku не установлен. Откройте страницу загрузки Shizuku.");
             launchShizukuApp();
         }
     }
@@ -319,8 +322,24 @@ public class MainActivity extends Activity {
 
         setStatus("Приложение Shizuku не установлено.");
         Intent browserIntent = new Intent(Intent.ACTION_VIEW,
-                Uri.parse("https://shizuku.rikka.app/"));
+                Uri.parse("https://github.com/RikkaApps/Shizuku/releases"));
         startActivity(browserIntent);
+    }
+
+    private boolean isShizukuInstalled() {
+        String[] packages = {
+                "rikka.shizuku",
+                "rikka.shizuku.manager",
+                "moe.shizuku.manager"
+        };
+        for (String pkg : packages) {
+            try {
+                getPackageManager().getPackageInfo(pkg, 0);
+                return true;
+            } catch (Exception ignored) {
+            }
+        }
+        return false;
     }
 
     private boolean hasShizukuPermission() {
