@@ -32,6 +32,7 @@ public class MainActivity extends Activity {
     private TextView logView;
     private EditText density0Input;
     private EditText density1Input;
+    private Button launchButton;
     private Button permissionButton;
     private Button bindButton;
     private Button applyButton;
@@ -146,6 +147,10 @@ public class MainActivity extends Activity {
         densityLayout.addView(makeLabeledInput("Display 1", density1Input), secondParams);
 
         root.addView(densityLayout, matchWrap());
+
+        launchButton = makeButton("Запустить Shizuku");
+        launchButton.setOnClickListener(v -> launchShizukuApp());
+        root.addView(launchButton, matchWrap());
 
         permissionButton = makeButton("Дать доступ Shizuku");
         permissionButton.setOnClickListener(v -> requestShizukuPermission());
@@ -323,11 +328,7 @@ public class MainActivity extends Activity {
 
         List<String> installedShizuku = getInstalledShizukuPackages();
         if (!installedShizuku.isEmpty()) {
-            String packageInfo = installedShizuku.get(0);
-            setStatus("Shizuku установлен, но не запущен. Откройте его вручную.");
-            Intent settingsIntent = new Intent(android.provider.Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
-                    Uri.parse("package:" + packageInfo));
-            startActivity(settingsIntent);
+            setStatus("Shizuku установлен, но не запущен. Запустите Shizuku вручную и вернитесь.");
             return;
         }
 
@@ -364,6 +365,7 @@ public class MainActivity extends Activity {
     private void refreshButtons() {
         boolean shizukuAlive = Shizuku.pingBinder();
         boolean hasPermission = hasShizukuPermission();
+        launchButton.setEnabled(!shizukuAlive);
         permissionButton.setEnabled(shizukuAlive && !hasPermission);
         bindButton.setEnabled(hasPermission && densityService == null);
         applyButton.setEnabled(densityService != null);
@@ -371,6 +373,7 @@ public class MainActivity extends Activity {
     }
 
     private void setButtonsEnabled(boolean enabled) {
+        launchButton.setEnabled(enabled);
         permissionButton.setEnabled(enabled);
         bindButton.setEnabled(enabled);
         applyButton.setEnabled(enabled);
