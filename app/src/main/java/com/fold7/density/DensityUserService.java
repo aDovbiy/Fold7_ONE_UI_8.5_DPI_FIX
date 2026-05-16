@@ -17,8 +17,8 @@ public class DensityUserService extends IFoldDensityService.Stub {
     }
 
     @Override
-    public String applyFoldPreset() throws RemoteException {
-        return runShell("wm density 550 -d 0 && wm density 455 -d 1");
+    public String applyFoldPreset(int density0, int density1) throws RemoteException {
+        return runShell("wm density " + density0 + " -d 0 && wm density " + density1 + " -d 1");
     }
 
     @Override

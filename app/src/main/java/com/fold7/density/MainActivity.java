@@ -2,14 +2,18 @@ package com.fold7.density;
 
 import android.app.Activity;
 import android.content.ComponentName;
+import android.content.Intent;
 import android.content.ServiceConnection;
 import android.content.pm.PackageManager;
 import android.graphics.Color;
+import android.net.Uri;
 import android.os.Bundle;
 import android.os.IBinder;
 import android.os.RemoteException;
+import android.text.InputType;
 import android.view.Gravity;
 import android.widget.Button;
+import android.widget.EditText;
 import android.widget.LinearLayout;
 import android.widget.ScrollView;
 import android.widget.TextView;
@@ -18,9 +22,13 @@ import rikka.shizuku.Shizuku;
 
 public class MainActivity extends Activity {
     private static final int SHIZUKU_PERMISSION_REQUEST = 7;
+    private static final int DEFAULT_DISPLAY_0_DENSITY = 550;
+    private static final int DEFAULT_DISPLAY_1_DENSITY = 455;
 
     private TextView statusView;
     private TextView logView;
+    private EditText density0Input;
+    private EditText density1Input;
     private Button permissionButton;
     private Button bindButton;
     private Button applyButton;
@@ -75,9 +83,12 @@ public class MainActivity extends Activity {
         Shizuku.addBinderDeadListener(binderDeadListener);
 
         refreshButtons();
-        setStatus(Shizuku.pingBinder()
-                ? "Shizuku найден. Нажми доступ, потом подключить."
-                : "Shizuku не запущен. Запусти его через Wireless debugging.");
+        if (Shizuku.pingBinder()) {
+            setStatus("Shizuku найден. Нажми доступ, потом подключить.");
+        } else {
+            setStatus("Shizuku не запущен. Запускаю Shizuku...");
+            launchShizukuApp();
+        }
     }
 
     @Override
@@ -114,6 +125,22 @@ public class MainActivity extends Activity {
         statusView.setPadding(0, 0, 0, dp(14));
         root.addView(statusView, matchWrap());
 
+        LinearLayout densityLayout = new LinearLayout(this);
+        densityLayout.setOrientation(LinearLayout.HORIZONTAL);
+        densityLayout.setWeightSum(2f);
+
+        density0Input = makeEditText(String.valueOf(DEFAULT_DISPLAY_0_DENSITY));
+        density1Input = makeEditText(String.valueOf(DEFAULT_DISPLAY_1_DENSITY));
+
+        densityLayout.addView(makeLabeledInput("Display 0", density0Input), new LinearLayout.LayoutParams(
+                0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f));
+        LinearLayout.LayoutParams secondParams = new LinearLayout.LayoutParams(
+                0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
+        secondParams.setMargins(dp(8), 0, 0, 0);
+        densityLayout.addView(makeLabeledInput("Display 1", density1Input), secondParams);
+
+        root.addView(densityLayout, matchWrap());
+
         permissionButton = makeButton("Дать доступ Shizuku");
         permissionButton.setOnClickListener(v -> requestShizukuPermission());
         root.addView(permissionButton, matchWrap());
@@ -122,8 +149,8 @@ public class MainActivity extends Activity {
         bindButton.setOnClickListener(v -> bindDensityService());
         root.addView(bindButton, matchWrap());
 
-        applyButton = makeButton("Применить 550 / 455");
-        applyButton.setOnClickListener(v -> runCommand(true));
+        applyButton = makeButton("Применить");
+        applyButton.setOnClickListener(v -> applyDensityPreset());
         root.addView(applyButton, matchWrap());
 
         resetButton = makeButton("Сбросить density");
@@ -149,6 +176,30 @@ public class MainActivity extends Activity {
         button.setText(text);
         button.setTextSize(16);
         return button;
+    }
+
+    private EditText makeEditText(String text) {
+        EditText editText = new EditText(this);
+        editText.setText(text);
+        editText.setInputType(InputType.TYPE_CLASS_NUMBER);
+        editText.setTextSize(16);
+        return editText;
+    }
+
+    private LinearLayout makeLabeledInput(String labelText, EditText editText) {
+        LinearLayout layout = new LinearLayout(this);
+        layout.setOrientation(LinearLayout.VERTICAL);
+
+        TextView label = new TextView(this);
+        label.setText(labelText);
+        label.setTextSize(14);
+        label.setTextColor(Color.rgb(36, 48, 60));
+        layout.addView(label);
+
+        layout.addView(editText, new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT));
+        return layout;
     }
 
     private void requestShizukuPermission() {
@@ -183,20 +234,21 @@ public class MainActivity extends Activity {
         setStatus("Подключаю сервис...");
     }
 
-    private void runCommand(boolean applyPreset) {
+    private void applyDensityPreset() {
         if (densityService == null) {
             setStatus("Сначала подключи сервис.");
             refreshButtons();
             return;
         }
 
+        int density0 = parseDensityValue(density0Input, DEFAULT_DISPLAY_0_DENSITY);
+        int density1 = parseDensityValue(density1Input, DEFAULT_DISPLAY_1_DENSITY);
+
         setButtonsEnabled(false);
         new Thread(() -> {
             String result;
             try {
-                result = applyPreset
-                        ? densityService.applyFoldPreset()
-                        : densityService.resetDensity();
+                result = densityService.applyFoldPreset(density0, density1);
             } catch (RemoteException e) {
                 result = "Ошибка сервиса: " + e.getMessage();
                 densityService = null;
@@ -208,6 +260,42 @@ public class MainActivity extends Activity {
                 refreshButtons();
             });
         }).start();
+    }
+
+    private int parseDensityValue(EditText input, int fallback) {
+        try {
+            String text = input.getText().toString().trim();
+            return text.isEmpty() ? fallback : Integer.parseInt(text);
+        } catch (NumberFormatException e) {
+            return fallback;
+        }
+    }
+
+    private void launchShizukuApp() {
+        String[] packages = {
+                "rikka.shizuku",
+                "rikka.shizuku.manager",
+                "moe.shizuku.manager"
+        };
+
+        Intent launchIntent = null;
+        for (String pkg : packages) {
+            launchIntent = getPackageManager().getLaunchIntentForPackage(pkg);
+            if (launchIntent != null) {
+                break;
+            }
+        }
+
+        if (launchIntent != null) {
+            setStatus("Запускаю Shizuku...");
+            startActivity(launchIntent);
+            return;
+        }
+
+        setStatus("Приложение Shizuku не установлено.");
+        Intent browserIntent = new Intent(Intent.ACTION_VIEW,
+                Uri.parse("https://shizuku.rikka.app/"));
+        startActivity(browserIntent);
     }
 
     private boolean hasShizukuPermission() {
