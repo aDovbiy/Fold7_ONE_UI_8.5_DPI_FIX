@@ -4,6 +4,7 @@ import android.app.Activity;
 import android.content.ComponentName;
 import android.content.Intent;
 import android.content.ServiceConnection;
+import android.content.pm.PackageInfo;
 import android.content.pm.PackageManager;
 import android.graphics.Color;
 import android.net.Uri;
@@ -17,6 +18,8 @@ import android.widget.EditText;
 import android.widget.LinearLayout;
 import android.widget.ScrollView;
 import android.widget.TextView;
+
+import java.util.List;
 
 import rikka.shizuku.Shizuku;
 
@@ -327,17 +330,14 @@ public class MainActivity extends Activity {
     }
 
     private boolean isShizukuInstalled() {
-        String[] packages = {
-                "rikka.shizuku",
-                "rikka.shizuku.manager",
-                "moe.shizuku.manager"
-        };
-        for (String pkg : packages) {
-            try {
-                getPackageManager().getPackageInfo(pkg, 0);
-                return true;
-            } catch (Exception ignored) {
+        try {
+            List<PackageInfo> packages = getPackageManager().getInstalledPackages(0);
+            for (PackageInfo pkg : packages) {
+                if (pkg.packageName.contains("shizuku")) {
+                    return true;
+                }
             }
+        } catch (Exception ignored) {
         }
         return false;
     }

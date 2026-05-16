@@ -4,6 +4,7 @@
         <package android:name="rikka.shizuku" />
         <package android:name="rikka.shizuku.manager" />
         <package android:name="moe.shizuku.manager" />
+        <package android:name="moe.shizuku.privileged.api" />
     </queries>
 
     <application
