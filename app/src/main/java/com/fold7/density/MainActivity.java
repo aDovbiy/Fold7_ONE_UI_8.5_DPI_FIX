@@ -154,7 +154,7 @@ public class MainActivity extends Activity {
         root.addView(applyButton, matchWrap());
 
         resetButton = makeButton("Сбросить density");
-        resetButton.setOnClickListener(v -> runCommand(false));
+        resetButton.setOnClickListener(v -> resetDensityPreset());
         root.addView(resetButton, matchWrap());
 
         logView = new TextView(this);
@@ -249,6 +249,31 @@ public class MainActivity extends Activity {
             String result;
             try {
                 result = densityService.applyFoldPreset(density0, density1);
+            } catch (RemoteException e) {
+                result = "Ошибка сервиса: " + e.getMessage();
+                densityService = null;
+            }
+            String finalResult = result;
+            runOnUiThread(() -> {
+                logView.setText(finalResult);
+                setStatus("Готово.");
+                refreshButtons();
+            });
+        }).start();
+    }
+
+    private void resetDensityPreset() {
+        if (densityService == null) {
+            setStatus("Сначала подключи сервис.");
+            refreshButtons();
+            return;
+        }
+
+        setButtonsEnabled(false);
+        new Thread(() -> {
+            String result;
+            try {
+                result = densityService.resetDensity();
             } catch (RemoteException e) {
                 result = "Ошибка сервиса: " + e.getMessage();
                 densityService = null;
