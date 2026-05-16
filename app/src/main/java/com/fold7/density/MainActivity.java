@@ -303,43 +303,57 @@ public class MainActivity extends Activity {
     }
 
     private void launchShizukuApp() {
-        String[] packages = {
+        String[] launchPackages = {
                 "rikka.shizuku",
                 "rikka.shizuku.manager",
                 "moe.shizuku.manager"
         };
 
-        Intent launchIntent = null;
-        for (String pkg : packages) {
-            launchIntent = getPackageManager().getLaunchIntentForPackage(pkg);
-            if (launchIntent != null) {
-                break;
+        for (String pkg : launchPackages) {
+            try {
+                Intent launchIntent = getPackageManager().getLaunchIntentForPackage(pkg);
+                if (launchIntent != null) {
+                    setStatus("Запускаю Shizuku...");
+                    startActivity(launchIntent);
+                    return;
+                }
+            } catch (Exception ignored) {
             }
         }
 
-        if (launchIntent != null) {
-            setStatus("Запускаю Shizuku...");
-            startActivity(launchIntent);
+        List<String> installedShizuku = getInstalledShizukuPackages();
+        if (!installedShizuku.isEmpty()) {
+            String packageInfo = installedShizuku.get(0);
+            setStatus("Shizuku установлен, но не запущен. Откройте его вручную.");
+            Intent settingsIntent = new Intent(android.provider.Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
+                    Uri.parse("package:" + packageInfo));
+            startActivity(settingsIntent);
             return;
         }
 
-        setStatus("Приложение Shizuku не установлено.");
+        setStatus("Shizuku не установлен. Откройте страницу загрузки Shizuku.");
         Intent browserIntent = new Intent(Intent.ACTION_VIEW,
                 Uri.parse("https://github.com/RikkaApps/Shizuku/releases"));
         startActivity(browserIntent);
     }
 
     private boolean isShizukuInstalled() {
+        return !getInstalledShizukuPackages().isEmpty();
+    }
+
+    private List<String> getInstalledShizukuPackages() {
         try {
             List<PackageInfo> packages = getPackageManager().getInstalledPackages(0);
+            List<String> installed = new java.util.ArrayList<>();
             for (PackageInfo pkg : packages) {
                 if (pkg.packageName.contains("shizuku")) {
-                    return true;
+                    installed.add(pkg.packageName);
                 }
             }
+            return installed;
         } catch (Exception ignored) {
         }
-        return false;
+        return new java.util.ArrayList<>();
     }
 
     private boolean hasShizukuPermission() {
